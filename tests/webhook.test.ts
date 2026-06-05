@@ -10,9 +10,10 @@ import { config } from "../src/config";
 const usedNonces = new Set<string>();
 
 jest.mock("../src/utils/redis", () => ({
-  isNonceUsed: jest.fn(async (nonce: string) => usedNonces.has(nonce)),
-  markNonceUsed: jest.fn(async (nonce: string) => {
+  acquireNonce: jest.fn(async (nonce: string) => {
+    if (usedNonces.has(nonce)) return false;
     usedNonces.add(nonce);
+    return true;
   }),
   connectRedis: jest.fn(),
   disconnectRedis: jest.fn(),

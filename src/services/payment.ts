@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { Invoice, IInvoice, InvoiceStatus } from "../models/invoice";
 import { Merchant } from "../models/merchant";
 import { calculateFee, calculateAmountToReceive } from "../utils/math";
-import { isNonceUsed, markNonceUsed } from "../utils/redis";
+import { acquireNonce } from "../utils/redis";
 
 export interface CreateInvoiceInput {
   amount: number;
@@ -66,7 +66,8 @@ export class PaymentService {
     payload: WebhookPayload,
     nonce: string,
   ): Promise<WebhookResult> {
-    if (await isNonceUsed(nonce)) {
+    const isNew = await acquireNonce(nonce);
+    if (!isNew) {
       const existing = await Invoice.findOne({ invoiceId: payload.invoiceId });
       if (existing) {
         return {
@@ -76,8 +77,6 @@ export class PaymentService {
       }
       return { updated: false };
     }
-
-    await markNonceUsed(nonce);
 
     const updated = await Invoice.findOneAndUpdate(
       { invoiceId: payload.invoiceId, status: "pending" },

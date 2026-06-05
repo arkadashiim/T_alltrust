@@ -16,16 +16,12 @@ export function getRedisClient(): RedisClient {
   return client;
 }
 
-export async function isNonceUsed(nonce: string): Promise<boolean> {
-  const exists = await client.exists(`nonce:${nonce}`);
-  return exists === 1;
-}
-
-export async function markNonceUsed(
+export async function acquireNonce(
   nonce: string,
   ttlSeconds: number = 600,
-): Promise<void> {
-  await client.set(`nonce:${nonce}`, "1", { EX: ttlSeconds });
+): Promise<boolean> {
+  const result = await client.set(`nonce:${nonce}`, "1", { NX: true, EX: ttlSeconds });
+  return result === "OK";
 }
 
 export async function disconnectRedis(): Promise<void> {
